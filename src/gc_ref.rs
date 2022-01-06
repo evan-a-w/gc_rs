@@ -25,6 +25,17 @@ impl<T: Trace<T>> GcRef<T> {
             flags,
         }
     }
+
+    pub fn false_ref() -> Self {
+        GcRef {
+            ptr: NonNull::dangling(),
+            flags: Rc::new(Cell::new(Flags {
+                marker: MarkerFlag::Unseen,
+                taken: TakenFlag::NotTaken,
+                free: false,
+            })),
+        }
+    }
 }
 
 impl<T: Trace<T>> GcRefMut<T> {
@@ -32,6 +43,17 @@ impl<T: Trace<T>> GcRefMut<T> {
         GcRefMut {
             ptr,
             flags,
+        }
+    }
+
+    pub fn false_ref() -> Self {
+        GcRefMut {
+            ptr: NonNull::dangling(),
+            flags: Rc::new(Cell::new(Flags {
+                marker: MarkerFlag::Unseen,
+                taken: TakenFlag::NotTaken,
+                free: false,
+            })),
         }
     }
 }
