@@ -155,13 +155,14 @@ impl<T: Trace<T>> Trace<T> for GcObj<T> {
     fn trace(&self, gc: &Gc<T>) {
         // Probably don't need this variant
         let marker = self.flags.get().marker;
-        if marker != MarkerFlag::Unseen {
+        if marker == MarkerFlag::Seen {
             return;
         }
         self.mark_children_not_seen();
-        // Safety: only mutation is within the flags
-        let obj_ref = unsafe { &* self.data.as_ptr() };
-        obj_ref.trace(gc);
+        match self.borrow() {
+            Some(ref gc_ref) => gc_ref.trace(gc),
+            None => (),
+        };
         self.mark_seen();
     }
 }
