@@ -159,6 +159,7 @@ impl<T: Trace<T>> GcObj<T> {
 
 
 // Should call trace recursively on children that are garbage collected.
+// Should not modify data other than that.
 pub trait Trace<T: Trace<T>> {
     fn trace(&self, gc: &Gc<T>);
 }

@@ -8,7 +8,7 @@ use gc_rs::gc_ref::{GcRef, GcRefMut};
 #[derive(Debug)]
 struct Data {
     pub s: String,
-    pub inner: Option<GcRef<Data>>,
+    pub inner: Option<GcRefMut<Data>>,
 }
 
 // Need to make Trace impl - just call recursively on refs.
@@ -44,7 +44,7 @@ fn main() {
 
     let second = Data {
         s: "second".to_string(),
-        inner: gc.get(first_id),
+        inner: gc.get_mut(first_id),
     };
 
     let second_id = gc.add(second);

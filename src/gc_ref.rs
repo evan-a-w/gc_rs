@@ -200,3 +200,15 @@ impl<T: Trace<T>> Clone for GcRef<T> {
         GcRef::new(self.ptr, self.flags.clone())
     }
 }
+
+impl<T: Trace<T>> PartialEq for GcRef<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.ptr == other.ptr
+    }
+}
+
+impl<T: Trace<T>> PartialEq for GcRefMut<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.ptr == other.ptr
+    }
+}

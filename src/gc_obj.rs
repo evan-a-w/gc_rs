@@ -161,6 +161,8 @@ impl<T: Trace<T>> Trace<T> for GcObj<T> {
         self.mark_children_not_seen();
         match self.borrow() {
             Some(ref gc_ref) => gc_ref.trace(gc),
+            // Safety: Only modifies values in Cell. This is probably not fine
+            // but I can't think of a better way to do it
             None => unsafe {
                 let gc_ref = &*self.data.as_ptr();
                 gc_ref.trace(gc);
