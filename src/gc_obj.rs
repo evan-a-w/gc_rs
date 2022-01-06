@@ -155,7 +155,7 @@ impl<T: Trace<T>> Trace<T> for GcObj<T> {
     fn trace(&self, gc: &Gc<T>) {
         // Probably don't need this variant
         let marker = self.flags.get().marker;
-        if marker == MarkerFlag::Seen {
+        if marker != MarkerFlag::Unseen {
             return;
         }
         self.mark_children_not_seen();
