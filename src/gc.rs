@@ -103,6 +103,32 @@ impl<T: Trace<T>> Gc<T> {
         self.ptrs.insert(id, obj);
     }
 
+    pub fn get_ref<'a>(&'a self, id: usize) -> Option<&'a T> {
+        let val = self.ptrs.get(&id)?;
+        let flag = val.flags.get();
+        if flag.taken == TakenFlag::NotTaken {
+            // Safety: Not taken, so can be safely read
+            // (not really, because we can't keep track of borrow status)
+            // Use at own peril.
+            unsafe { Some(&*val.data.as_ptr()) }
+        } else {
+            None
+        }
+    }
+
+    pub fn get_ref_mut<'a>(&'a self, id: usize) -> Option<&'a mut T> {
+        let val = self.ptrs.get(&id)?;
+        let flag = val.flags.get();
+        if flag.taken == TakenFlag::NotTaken {
+            // Safety: Not taken, so can be safely read
+            // (not really, because we can't keep track of borrow status)
+            // Use at own peril.
+            unsafe { Some(&mut *val.data.as_ptr()) }
+        } else {
+            None
+        }
+    }
+
     pub fn get(&self, id: usize) -> Option<GcRef<T>> {
         let obj = self.ptrs.get(&id)?;
         obj.borrow()
