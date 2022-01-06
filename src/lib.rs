@@ -1,3 +1,3 @@
-mod gc;
-mod gc_obj;
-mod gc_ref;
+pub mod gc;
+pub mod gc_obj;
+pub mod gc_ref;

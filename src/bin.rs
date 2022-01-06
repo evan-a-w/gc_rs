@@ -1,10 +1,6 @@
-mod gc;
-mod gc_obj;
-mod gc_ref;
-
-use crate::gc::{Gc, Trace};
-use crate::gc_obj::GcObj;
-use crate::gc_ref::{GcRef, GcRefMut};
+use gc_rs::gc::{Gc, Trace};
+use gc_rs::gc_obj::GcObj;
+use gc_rs::gc_ref::{GcRef, GcRefMut};
 
 // Tests are ran here so valgrind can just be used
 
