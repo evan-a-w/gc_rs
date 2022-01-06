@@ -159,7 +159,9 @@ impl<T: Trace<T>> Trace<T> for GcObj<T> {
             return;
         }
         self.mark_children_not_seen();
-        self.borrow().unwrap().trace(gc);
+        // Safety: only mutation is within the flags
+        let obj_ref = unsafe { &* self.data.as_ptr() };
+        obj_ref.trace(gc);
         self.mark_seen();
     }
 }
