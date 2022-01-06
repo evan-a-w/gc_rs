@@ -161,7 +161,10 @@ impl<T: Trace<T>> Trace<T> for GcObj<T> {
         self.mark_children_not_seen();
         match self.borrow() {
             Some(ref gc_ref) => gc_ref.trace(gc),
-            None => (),
+            None => unsafe {
+                let gc_ref = &*self.data.as_ptr();
+                gc_ref.trace(gc);
+            },
         };
         self.mark_seen();
     }
