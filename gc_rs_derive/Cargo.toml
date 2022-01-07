@@ -1,0 +1,15 @@
+[package]
+name = "gc_rs_derive"
+version = "0.1.0"
+authors = ["Evan Williams <evanawilliams@live.com>"]
+repository = "https://github.com/evan-a-w/gc_rs"
+edition = "2021"
+
+[lib]
+name = "gc_rs_derive"
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+synstructure = "0.12.6"
