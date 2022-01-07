@@ -9,14 +9,14 @@ use std::rc::Rc;
 // Reference counted access of garbage collected value.
 // Acts like Rc<RefCell<T>> - can borrow and borrow_mut
 #[derive(Debug)]
-pub struct GcObj<T: Trace<T>> {
+pub struct GcObj<T> {
     pub id: usize,
     flags: Rc<Cell<Flags>>,
     refs: Rc<Cell<usize>>,
     data: NonNull<T>,
 }
 
-impl<T: Trace<T>> Clone for GcObj<T> {
+impl<T> Clone for GcObj<T> {
     fn clone(&self) -> Self {
         let mut refs = self.refs.get();
         refs += 1;
@@ -102,7 +102,7 @@ impl Flags {
     }
 }
 
-impl<T: Trace<T>> GcObj<T> {
+impl<T> GcObj<T> {
     pub fn new_data(id: usize, flags: Rc<Cell<Flags>>, refs: Rc<Cell<usize>>,
                data: NonNull<T>) -> Self {
         GcObj {
@@ -186,28 +186,13 @@ impl<T: Trace<T>> GcObj<T> {
 }
 
 // Marks as seen and calls trace on children
-impl<T: Trace<T>> Trace<T> for GcObj<T> {
-    fn trace(&self, gc: &Gc<T>) {
-        // Probably don't need this variant
-        let marker = self.flags.get().marker;
-        if marker == MarkerFlag::Seen {
-            return;
-        }
-        self.mark_children_not_seen();
-        match self.borrow() {
-            Some(ref gc_ref) => gc_ref.trace(gc),
-            // Safety: Only modifies values in Cell. This is probably not fine
-            // but I can't think of a better way to do it
-            None => unsafe {
-                let gc_ref = &*self.data.as_ptr();
-                gc_ref.trace(gc);
-            },
-        };
+impl<T> Trace<T> for GcObj<T> {
+    fn trace(&self) {
         self.mark_seen();
     }
 }
 
-impl<T: Trace<T>> Drop for GcObj<T> {
+impl<T> Drop for GcObj<T> {
     fn drop(&mut self) {
         let mut refs = self.refs.get();
         refs -= 1;

@@ -11,17 +11,6 @@ struct Data {
     pub inner: Option<GcRef<Data>>,
 }
 
-// Need to make Trace impl - just call recursively on refs.
-// Might be able to make derivable
-impl Trace<Data> for Data {
-    fn trace(&self, gc: &Gc<Data>) {
-        match self.inner {
-            Some(ref inner) => inner.trace(gc),
-            None => (),
-        }
-    }
-}
-
 fn inner_function(data: GcRef<Data>, gc: &mut Gc<Data>) {
     assert!(data.inner.as_ref().unwrap().s == "first");
     for _ in 0..100 {

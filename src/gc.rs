@@ -9,14 +9,14 @@ use std::rc::Rc;
 
 
 #[derive(Debug)]
-pub struct Gc<T: Trace<T>> {
+pub struct Gc<T> {
     pub ptrs: HashMap<usize, GcObj<T>>,
     pub max_id: usize,
     pub last_gc: Instant,
     pub gc_duration: Duration,
 }
 
-impl<T: Trace<T>> Gc<T> {
+impl<T> Gc<T> {
     pub fn new() -> Gc<T> {
         Gc {
             ptrs: HashMap::new(),
@@ -37,8 +37,8 @@ impl<T: Trace<T>> Gc<T> {
     pub fn collect_garbage(&mut self) {
         for obj in self.ptrs.values() {
             if obj.get_flags().taken != TakenFlag::NotTaken
-               || obj.get_refs() > 0 {
-                obj.trace(self);
+               || obj.get_refs() > 1 {
+                obj.trace();
             }
         }
 
@@ -143,7 +143,7 @@ impl<T: Trace<T>> Gc<T> {
     }
 }
 
-impl<T: Trace<T>> GcObj<T> {
+impl<T> GcObj<T> {
     pub fn new(state: &mut Gc<T>, data: T) -> GcObj<T> {
         // Safety: Box is not null
         let data = unsafe {
@@ -160,8 +160,6 @@ impl<T: Trace<T>> GcObj<T> {
 }
 
 
-// Should call trace recursively on children that are garbage collected.
-// SAFETY: Should not modify data other than that.
-pub trait Trace<T: Trace<T>> {
-    fn trace(&self, gc: &Gc<T>);
+pub trait Trace<T> {
+    fn trace(&self);
 }

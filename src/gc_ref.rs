@@ -7,18 +7,18 @@ use std::rc::Rc;
 use std::convert::{TryInto, Into, AsRef, AsMut};
 
 #[derive(Debug)]
-pub struct GcRef<T: Trace<T>> {
+pub struct GcRef<T> {
     ptr: NonNull<T>,
     flags: Rc<Cell<Flags>>,
 }
 
 #[derive(Debug)]
-pub struct GcRefMut<T: Trace<T>> {
+pub struct GcRefMut<T> {
     ptr: NonNull<T>,
     flags: Rc<Cell<Flags>>,
 }
 
-impl<T: Trace<T>> GcRef<T> {
+impl<T> GcRef<T> {
     pub fn new(ptr: NonNull<T>, flags: Rc<Cell<Flags>>) -> Self {
         GcRef {
             ptr,
@@ -38,7 +38,7 @@ impl<T: Trace<T>> GcRef<T> {
     }
 }
 
-impl<T: Trace<T>> GcRefMut<T> {
+impl<T> GcRefMut<T> {
     pub fn new(ptr: NonNull<T>, flags: Rc<Cell<Flags>>) -> Self {
         GcRefMut {
             ptr,
@@ -58,7 +58,7 @@ impl<T: Trace<T>> GcRefMut<T> {
     }
 }
 
-impl<T: Trace<T>> Deref for GcRef<T> {
+impl<T> Deref for GcRef<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
@@ -68,7 +68,7 @@ impl<T: Trace<T>> Deref for GcRef<T> {
     }
 }
 
-impl<T: Trace<T>> Deref for GcRefMut<T> {
+impl<T> Deref for GcRefMut<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
@@ -77,14 +77,14 @@ impl<T: Trace<T>> Deref for GcRefMut<T> {
     }
 }
 
-impl<T: Trace<T>> DerefMut for GcRefMut<T> {
+impl<T> DerefMut for GcRefMut<T> {
     fn deref_mut(&mut self) -> &mut T {
         // Safety - guaranteed to be uniquely borrowed through borrow flags
         unsafe { self.ptr.as_mut() }
     }
 }
 
-impl<T: Trace<T>> AsRef<T> for GcRef<T> {
+impl<T> AsRef<T> for GcRef<T> {
     fn as_ref(&self) -> &T {
         // Safety - guaranteed to not be uniquely borrowed or owned through
         // flags.
@@ -92,7 +92,7 @@ impl<T: Trace<T>> AsRef<T> for GcRef<T> {
     }
 }
 
-impl<T: Trace<T>> AsRef<T> for GcRefMut<T> {
+impl<T> AsRef<T> for GcRefMut<T> {
     fn as_ref(&self) -> &T {
         // Safety - guaranteed to not be uniquely borrowed or owned through
         // flags.
@@ -100,14 +100,14 @@ impl<T: Trace<T>> AsRef<T> for GcRefMut<T> {
     }
 }
 
-impl<T: Trace<T>> AsMut<T> for GcRefMut<T> {
+impl<T> AsMut<T> for GcRefMut<T> {
     fn as_mut(&mut self) -> &mut T {
         // Safety - guaranteed to be uniqued borrowed by flags
         unsafe { self.ptr.as_mut() }
     }
 }
 
-impl<T: Trace<T>> Drop for GcRef<T> {
+impl<T> Drop for GcRef<T> {
     fn drop(&mut self) {
         let mut flags = self.flags.get();
         flags.remove_shared().unwrap();
@@ -121,7 +121,7 @@ impl<T: Trace<T>> Drop for GcRef<T> {
     }
 }
 
-impl<T: Trace<T>> Drop for GcRefMut<T> {
+impl<T> Drop for GcRefMut<T> {
     fn drop(&mut self) {
         let mut flags = self.flags.get();
         flags.remove_taken();
@@ -138,7 +138,7 @@ impl<T: Trace<T>> Drop for GcRefMut<T> {
     }
 }
 
-impl<T: Trace<T>> TryInto<GcRefMut<T>> for GcRef<T> {
+impl<T> TryInto<GcRefMut<T>> for GcRef<T> {
     type Error = ();
 
     fn try_into(self) -> Result<GcRefMut<T>, Self::Error> {
@@ -156,7 +156,7 @@ impl<T: Trace<T>> TryInto<GcRefMut<T>> for GcRef<T> {
     }
 }
 
-impl<T: Trace<T>> Into<GcRef<T>> for GcRefMut<T> {
+impl<T> Into<GcRef<T>> for GcRefMut<T> {
     fn into(self) -> GcRef<T> {
         let mut flags = self.flags.get();
         flags.taken = TakenFlag::Shared(1);
@@ -165,33 +165,23 @@ impl<T: Trace<T>> Into<GcRef<T>> for GcRefMut<T> {
     }
 }
 
-impl<T: Trace<T>> Trace<T> for GcRef<T> {
-    fn trace(&self, gc: &Gc<T>) {
+impl<T> Trace<T> for GcRef<T> {
+    fn trace(&self) {
         let mut flags = self.flags.get();
-        if flags.marker == MarkerFlag::Seen {
-            return;
-        }
-        flags.mark_children_not_seen();
-        self.as_ref().trace(gc);
         flags.mark_seen();
         self.flags.set(flags);
     }
 }
 
-impl<T: Trace<T>> Trace<T> for GcRefMut<T> {
-    fn trace(&self, gc: &Gc<T>) {
+impl<T> Trace<T> for GcRefMut<T> {
+    fn trace(&self) {
         let mut flags = self.flags.get();
-        if flags.marker == MarkerFlag::Seen {
-            return;
-        }
-        flags.mark_children_not_seen();
-        self.as_ref().trace(gc);
         flags.mark_seen();
         self.flags.set(flags);
     }
 }
 
-impl<T: Trace<T>> Clone for GcRef<T> {
+impl<T> Clone for GcRef<T> {
     fn clone(&self) -> Self {
         let mut flags = self.flags.get();
         flags.taken = TakenFlag::Shared(1);
@@ -200,13 +190,13 @@ impl<T: Trace<T>> Clone for GcRef<T> {
     }
 }
 
-impl<T: Trace<T>> PartialEq for GcRef<T> {
+impl<T> PartialEq for GcRef<T> {
     fn eq(&self, other: &Self) -> bool {
         self.ptr == other.ptr
     }
 }
 
-impl<T: Trace<T>> PartialEq for GcRefMut<T> {
+impl<T> PartialEq for GcRefMut<T> {
     fn eq(&self, other: &Self) -> bool {
         self.ptr == other.ptr
     }
