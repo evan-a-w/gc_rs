@@ -16,6 +16,12 @@ pub struct GcObj<T> {
     data: NonNull<T>,
 }
 
+impl<T> PartialEq for GcObj<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
 impl<T> Clone for GcObj<T> {
     fn clone(&self) -> Self {
         let mut refs = self.refs.get();
