@@ -117,6 +117,10 @@ impl<T: Trace<T>> GcObj<T> {
         self.flags.get()
     }
 
+    pub fn get_refs(&self) -> usize {
+        self.refs.get()
+    }
+
     pub fn get_ptr(&self) -> *mut T {
         self.data.as_ptr()
     }

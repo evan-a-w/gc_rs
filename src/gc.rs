@@ -36,9 +36,9 @@ impl<T: Trace<T>> Gc<T> {
 
     pub fn collect_garbage(&mut self) {
         for obj in self.ptrs.values() {
-            match obj.get_flags().taken {
-                TakenFlag::NotTaken => (),
-                _ => { obj.trace(self); },
+            if obj.get_flags().taken != TakenFlag::NotTaken
+               || obj.get_refs() > 0 {
+                obj.trace(self);
             }
         }
 
@@ -161,7 +161,7 @@ impl<T: Trace<T>> GcObj<T> {
 
 
 // Should call trace recursively on children that are garbage collected.
-// Should not modify data other than that.
+// SAFETY: Should not modify data other than that.
 pub trait Trace<T: Trace<T>> {
     fn trace(&self, gc: &Gc<T>);
 }
