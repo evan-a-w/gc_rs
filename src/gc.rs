@@ -36,7 +36,7 @@ impl<T: Trace<T>> Gc<T> {
 
     pub fn collect_garbage(&mut self) {
         for obj in self.ptrs.values() {
-            match obj.flags.get().taken {
+            match obj.get_flags().taken {
                 TakenFlag::NotTaken => (),
                 _ => { obj.trace(self); },
             }
@@ -44,7 +44,7 @@ impl<T: Trace<T>> Gc<T> {
 
         let mut to_delete = vec![];
         for obj in self.ptrs.values() {
-            match obj.flags.get().marker {
+            match obj.get_flags().marker {
                 MarkerFlag::Unseen => {
                     to_delete.push(obj.id);
                 }
@@ -53,8 +53,7 @@ impl<T: Trace<T>> Gc<T> {
         }
 
         for id in to_delete {
-            let gco = self.ptrs.get_mut(&id).unwrap();
-            gco.free();
+            // Drop is implemented already
             self.ptrs.remove(&id);
         }
     }
@@ -63,11 +62,11 @@ impl<T: Trace<T>> Gc<T> {
         self.try_collect_garbage();
         let obj = self.ptrs.get_mut(&id)?;
         // Ensure that can't be owned while refs are out
-        if obj.flags.get().taken != TakenFlag::NotTaken {
+        if obj.get_flags().taken != TakenFlag::NotTaken {
             return None;
         }
         // Safety: Not taken, so ownership can be safely transferred
-        let res = unsafe { *Box::from_raw(obj.data.as_ptr()) };
+        let res = unsafe { *Box::from_raw(obj.get_ptr()) };
         self.ptrs.remove(&id);
         Some(res)
     }
@@ -89,28 +88,27 @@ impl<T: Trace<T>> Gc<T> {
     pub fn add_id(&mut self, data: T, id: usize) {
         self.try_collect_garbage();
         // Safety: Box is not null
-        let obj = GcObj {
-            data: unsafe {
-                NonNull::new_unchecked(Box::into_raw(Box::new(data)))
-            },
-            flags: Rc::new(Cell::new(Flags {
-                marker: MarkerFlag::Unseen,
-                taken: TakenFlag::NotTaken,
-                free: false,
-            })),
-            id,
+        let flags = Rc::new(Cell::new(Flags {
+            marker: MarkerFlag::Unseen,
+            taken: TakenFlag::NotTaken,
+            free: false,
+        }));
+        let refs = Rc::new(Cell::new(1));
+        let data = unsafe {
+            NonNull::new_unchecked(Box::into_raw(Box::new(data)))
         };
+        let obj = GcObj::new_data(id, flags, refs, data);
         self.ptrs.insert(id, obj);
     }
 
     pub fn get_ref<'a>(&'a self, id: usize) -> Option<&'a T> {
         let val = self.ptrs.get(&id)?;
-        let flag = val.flags.get();
+        let flag = val.get_flags();
         if flag.taken == TakenFlag::NotTaken {
             // Safety: Not taken, so can be safely read
             // (not really, because we can't keep track of borrow status)
             // Use at own peril.
-            unsafe { Some(&*val.data.as_ptr()) }
+            unsafe { Some(&*val.get_ptr()) }
         } else {
             None
         }
@@ -118,15 +116,20 @@ impl<T: Trace<T>> Gc<T> {
 
     pub fn get_ref_mut<'a>(&'a self, id: usize) -> Option<&'a mut T> {
         let val = self.ptrs.get(&id)?;
-        let flag = val.flags.get();
+        let flag = val.get_flags();
         if flag.taken == TakenFlag::NotTaken {
             // Safety: Not taken, so can be safely read
             // (not really, because we can't keep track of borrow status)
             // Use at own peril.
-            unsafe { Some(&mut *val.data.as_ptr()) }
+            unsafe { Some(&mut *val.get_ptr()) }
         } else {
             None
         }
+    }
+
+    pub fn get_gc_obj(&self, id: usize) -> Option<GcObj<T>> {
+        let obj = self.ptrs.get(&id)?;
+        Some(obj.clone())
     }
 
     pub fn get(&self, id: usize) -> Option<GcRef<T>> {
@@ -143,17 +146,16 @@ impl<T: Trace<T>> Gc<T> {
 impl<T: Trace<T>> GcObj<T> {
     pub fn new(state: &mut Gc<T>, data: T) -> GcObj<T> {
         // Safety: Box is not null
-        GcObj {
-            data: unsafe {
-                NonNull::new_unchecked(Box::into_raw(Box::new(data)))
-            },
-            flags: Rc::new(Cell::new(Flags {
-                marker: MarkerFlag::Unseen,
-                taken: TakenFlag::NotTaken,
-                free: false,
-            })),
-            id: state.get_new_id(),
-        }
+        let data = unsafe {
+            NonNull::new_unchecked(Box::into_raw(Box::new(data)))
+        };
+        let refs = Rc::new(Cell::new(1));
+        let flags = Rc::new(Cell::new(Flags {
+            marker: MarkerFlag::Unseen,
+            taken: TakenFlag::NotTaken,
+            free: false,
+        }));
+        GcObj::new_data(state.get_new_id(), flags, refs, data)
     }
 }
 
@@ -162,22 +164,4 @@ impl<T: Trace<T>> GcObj<T> {
 // Should not modify data other than that.
 pub trait Trace<T: Trace<T>> {
     fn trace(&self, gc: &Gc<T>);
-}
-
-
-impl<T: Trace<T>> Drop for Gc<T> {
-    fn drop(&mut self) {
-        for obj in self.ptrs.values_mut() {
-            let mut flags = obj.flags.get();
-            // Don't free if it's taken
-            if flags.taken != TakenFlag::NotTaken {
-                // This flag ensures that the memory will be freed (once) by the 
-                // GcRefs or GcRefMut that have/has the data
-                flags.free = true;
-                obj.flags.set(flags);
-            } else {
-                obj.free();
-            }
-        }
-    }
 }

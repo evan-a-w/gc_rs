@@ -110,7 +110,7 @@ impl<T: Trace<T>> AsMut<T> for GcRefMut<T> {
 impl<T: Trace<T>> Drop for GcRef<T> {
     fn drop(&mut self) {
         let mut flags = self.flags.get();
-        flags.remove_shared();
+        flags.remove_shared().unwrap();
         if flags.free && flags.taken == TakenFlag::NotTaken {
             // Safety: Free only if there are now no references - no double free
             unsafe {
@@ -124,13 +124,12 @@ impl<T: Trace<T>> Drop for GcRef<T> {
 impl<T: Trace<T>> Drop for GcRefMut<T> {
     fn drop(&mut self) {
         let mut flags = self.flags.get();
-        flags.remove_shared();
-        let flags = self.flags.get();
+        flags.remove_taken();
         // Safety: Since its a unique reference, there can't be others, so we
-        // can free data. If the flag isn't unique, it means that it has been
+        // can free data. If the flag isn't NotTaken, it means that it has been
         // converted into a GcRef, which means we don't want to free it
         // (transferred ownership to the GcRef)
-        if flags.free && flags.taken == TakenFlag::Unique {
+        if flags.free && flags.taken == TakenFlag::NotTaken {
             unsafe {
                 let _ = *Box::from_raw(self.ptr.as_ptr());
             }

@@ -6,11 +6,28 @@ use crate::gc::*;
 use crate::gc_ref::*;
 use std::rc::Rc;
 
+// Reference counted access of garbage collected value.
+// Acts like Rc<RefCell<T>> - can borrow and borrow_mut
 #[derive(Debug)]
 pub struct GcObj<T: Trace<T>> {
     pub id: usize,
-    pub flags: Rc<Cell<Flags>>,
-    pub data: NonNull<T>,
+    flags: Rc<Cell<Flags>>,
+    refs: Rc<Cell<usize>>,
+    data: NonNull<T>,
+}
+
+impl<T: Trace<T>> Clone for GcObj<T> {
+    fn clone(&self) -> Self {
+        let mut refs = self.refs.get();
+        refs += 1;
+        self.refs.set(refs);
+        GcObj {
+            id: self.id,
+            flags: self.flags.clone(),
+            refs: self.refs.clone(),
+            data: self.data,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -86,6 +103,24 @@ impl Flags {
 }
 
 impl<T: Trace<T>> GcObj<T> {
+    pub fn new_data(id: usize, flags: Rc<Cell<Flags>>, refs: Rc<Cell<usize>>,
+               data: NonNull<T>) -> Self {
+        GcObj {
+            id,
+            flags,
+            refs,
+            data,
+        }
+    }
+
+    pub fn get_flags(&self) -> Flags {
+        self.flags.get()
+    }
+
+    pub fn get_ptr(&self) -> *mut T {
+        self.data.as_ptr()
+    }
+    
     pub fn add_shared(&self) -> Option<()> {
         let mut flag = self.flags.get();
         flag.add_shared()?;
@@ -141,12 +176,8 @@ impl<T: Trace<T>> GcObj<T> {
         Some(GcRefMut::new(self.data, self.flags.clone()))
     }
 
-    pub fn free(&mut self) {
-        // Safety: up to the caller to not double free - this is just for ease
-        // of use
-        unsafe {
-            let _ = *Box::from_raw(self.data.as_ptr());
-        }
+    pub unsafe fn free(&mut self) {
+        let _ = *Box::from_raw(self.data.as_ptr());
     }
 }
 
@@ -169,5 +200,27 @@ impl<T: Trace<T>> Trace<T> for GcObj<T> {
             },
         };
         self.mark_seen();
+    }
+}
+
+impl<T: Trace<T>> Drop for GcObj<T> {
+    fn drop(&mut self) {
+        let mut refs = self.refs.get();
+        refs -= 1;
+        self.refs.set(refs);
+        if refs == 0 {
+            let mut flags = self.flags.get();
+            // Don't free if it's taken
+            if flags.taken != TakenFlag::NotTaken {
+                // This flag ensures that the memory will be freed (once) by the 
+                // GcRefs or GcRefMut that have/has the data
+                flags.free = true;
+                self.flags.set(flags);
+            } else {
+                // Safety: Only frees if the value is not used elsewhere
+                // (tracked through flags and ref count)
+                unsafe { self.free(); }
+            }
+        }
     }
 }
