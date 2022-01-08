@@ -6,6 +6,8 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
+
+#[derive(Clone)]
 pub struct Gc<T: Trace + ?Sized + 'static> {
     gc_node_ptr: NonNull<GcNode<T>>,
     borrowed: Rc<Cell<bool>>,
