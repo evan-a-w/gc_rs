@@ -169,3 +169,67 @@ impl<T: std::fmt::Debug + Trace> std::fmt::Debug for Gc<T> {
         write!(f, "Gc({:?})", self.deref())
     }
 }
+
+impl<T: Trace> Trace for Option<T> {
+    fn trace(&self) {
+        if let Some(ref val) = self {
+            val.trace();
+        }
+    }
+
+    fn root_children(&self) {
+        if let Some(ref val) = self {
+            val.root_children();
+        }
+    }
+
+    fn deroot_children(&self) {
+        if let Some(ref val) = self {
+            val.deroot_children();
+        }
+    }
+
+    fn root(&self) {
+        if let Some(ref val) = self {
+            val.root();
+        }
+    }
+
+    fn deroot(&self) {
+        if let Some(ref val) = self {
+            val.deroot();
+        }
+    }
+}
+
+impl<T: Trace, E> Trace for Result<T, E> {
+    fn trace(&self) {
+        if let Ok(ref val) = self {
+            val.trace();
+        }
+    }
+
+    fn root_children(&self) {
+        if let Ok(ref val) = self {
+            val.root_children();
+        }
+    }
+
+    fn deroot_children(&self) {
+        if let Ok(ref val) = self {
+            val.deroot_children();
+        }
+    }
+
+    fn root(&self) {
+        if let Ok(ref val) = self {
+            val.root();
+        }
+    }
+
+    fn deroot(&self) {
+        if let Ok(ref val) = self {
+            val.deroot();
+        }
+    }
+}
