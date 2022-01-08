@@ -6,7 +6,6 @@ repository = "https://github.com/evan-a-w/gc_rs"
 edition = "2021"
 
 [lib]
-name = "gc_rs_derive"
 proc-macro = true
 
 [dependencies]

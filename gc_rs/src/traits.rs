@@ -7,6 +7,10 @@ pub trait Trace {
     fn root_children(&self);
 
     fn deroot_children(&self);
+
+    fn root(&self);
+
+    fn deroot(&self);
 }
 
 #[macro_export]
@@ -18,6 +22,10 @@ macro_rules! empty_trace {
         fn root_children(&self) {}
         #[inline]
         fn deroot_children(&self) {}
+        #[inline]
+        fn root(&self) {}
+        #[inline]
+        fn deroot(&self) {}
     };
 }
 

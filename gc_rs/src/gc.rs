@@ -45,25 +45,6 @@ impl<T: Trace> Gc<T> {
         Some(GcRefMut { gc_node_ptr: self.gc_node_ptr, borrowed: self.borrowed.clone() })
     }
 
-    pub fn root(&self) {
-        self.root.set(true);
-        unsafe {
-            let r = self.gc_node_ptr.as_ref();
-            let mut data = r.data.get();
-            data.add_roots();
-            r.data.set(data);
-        }
-    }
-
-    pub fn deroot(&self) {
-        self.root.set(false);
-        unsafe {
-            let r = self.gc_node_ptr.as_ref();
-            let mut data = r.data.get();
-            data.sub_roots();
-            r.data.set(data);
-        }
-    }
 
     pub fn is_root(&self) -> bool {
         self.root.get()
@@ -141,6 +122,26 @@ impl<T: Trace + ?Sized + 'static> Trace for Gc<T> {
         unsafe { 
             let ptr = self.gc_node_ptr.as_ref();
             ptr.val.deroot_children();
+        }
+    }
+
+    fn root(&self) {
+        self.root.set(true);
+        unsafe {
+            let r = self.gc_node_ptr.as_ref();
+            let mut data = r.data.get();
+            data.add_roots();
+            r.data.set(data);
+        }
+    }
+
+    fn deroot(&self) {
+        self.root.set(false);
+        unsafe {
+            let r = self.gc_node_ptr.as_ref();
+            let mut data = r.data.get();
+            data.sub_roots();
+            r.data.set(data);
         }
     }
 }

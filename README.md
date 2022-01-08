@@ -1,0 +1,1 @@
+A singly threaded garbage collector generic across types implementing the 'Trace' trait (derivable). Objects are accessed through the smart pointers 'Gc' and 'GcRefMut'. Garbage collection is implemented with a mark and sweep algorithm, and is triggered on a time interval that is by default five seconds.

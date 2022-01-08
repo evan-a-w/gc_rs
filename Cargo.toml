@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "gc_rs",
-    "gc_rs_derive"
+    "gc_rs_derive",
+    "gc_rs_tests"
 ]
