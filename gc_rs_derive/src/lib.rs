@@ -2,9 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use synstructure::{decl_derive, Structure};
 
-mod tests;
-
-pub(crate) fn trace_derive(s: Structure) -> proc_macro2::TokenStream {
+fn trace_derive(s: Structure) -> proc_macro2::TokenStream {
     let trace_body = s.each(|bi| quote! {
         ::gc_rs::Trace::trace(#bi);
     });

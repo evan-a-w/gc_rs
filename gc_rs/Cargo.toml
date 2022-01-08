@@ -11,7 +11,3 @@ path = "src/lib.rs"
 
 [dependencies]
 gc_rs_derive = { path = "../gc_rs_derive" }
-
-[[bin]]
-name = "gc_rs_bin"
-path = "src/bin.rs"

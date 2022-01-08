@@ -12,6 +12,11 @@ mod tests {
     fn test_auto_trait() {
         auto_trait();
     }
+
+    #[test]
+    fn test_vec() {
+        vec();
+    }
 }
 
 pub fn manual_trait() {
@@ -174,4 +179,19 @@ pub fn auto_trait() {
         let len = unsafe { st.borrow().get_ptrs_len() };
         len
     }) == 0);
+}
+
+pub fn vec() {
+    #[derive(Trace)]
+    struct Foo {
+        pub x: i32,
+        pub y: String,
+    }
+
+    {
+        let mut v = Vec::new();
+        v.push(Gc::new(Foo { x: 1, y: "hi".to_string() }));
+    }
+
+    GC_STATE.with(|st| st.borrow_mut().collect_garbage());
 }
