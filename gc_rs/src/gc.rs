@@ -161,3 +161,9 @@ impl<T: PartialEq + Trace> PartialEq for Gc<T> {
         self.deref() == other.deref()
     }
 }
+
+impl<T: std::fmt::Debug + Trace> std::fmt::Debug for Gc<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Gc({:?})", self.deref())
+    }
+}
