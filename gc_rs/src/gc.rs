@@ -49,6 +49,10 @@ impl<T: Trace> Gc<T> {
     pub fn is_root(&self) -> bool {
         self.root.get()
     }
+
+    pub fn ptr_eq(&self, other: &Self) -> bool {
+        self.gc_node_ptr == other.gc_node_ptr
+    }
 }
 
 impl<T: Trace + ?Sized + 'static> Deref for Gc<T> {
@@ -143,5 +147,17 @@ impl<T: Trace + ?Sized + 'static> Trace for Gc<T> {
             data.sub_roots();
             r.data.set(data);
         }
+    }
+}
+
+impl<T: std::fmt::Display + Trace> std::fmt::Display for Gc<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.deref().fmt(f)
+    }
+}
+
+impl<T: PartialEq + Trace> PartialEq for Gc<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.deref() == other.deref()
     }
 }
