@@ -39,7 +39,7 @@ impl<T: Trace> Gc<T> {
         r.data.get().get_roots()
     }
 
-    pub fn borrow_mut(&mut self) -> Option<GcRefMut<T>> {
+    pub fn borrow_mut(&self) -> Option<GcRefMut<T>> {
         if self.borrowed.get() {
             return None;
         }
