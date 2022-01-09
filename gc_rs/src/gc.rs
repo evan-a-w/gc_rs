@@ -79,7 +79,8 @@ impl<T: Trace + ?Sized + 'static> Deref for GcRefMut<T> {
 
 impl<T: Trace + ?Sized + 'static> DerefMut for GcRefMut<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        // SAFETY: The value cannot be mutably borrowed or immutably borrowed (GcRefMut guarantees such)
+        // SAFETY: The value cannot be mutably borrowed. It can be immutably borrowed
+        // actually but just dont :))
         unsafe { &mut self.gc_node_ptr.as_mut().val }
     }
 }
