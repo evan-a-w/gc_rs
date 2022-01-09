@@ -7,11 +7,25 @@ use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
 
-#[derive(Clone)]
 pub struct Gc<T: Trace + ?Sized + 'static> {
     gc_node_ptr: NonNull<GcNode<T>>,
     borrowed: Rc<Cell<bool>>,
     root: Cell<bool>,
+}
+
+impl<T: Trace + ?Sized + 'static> Clone for Gc<T> {
+    fn clone(&self) -> Self {
+        let gc_node_ptr = self.gc_node_ptr.clone();
+        let borrowed = self.borrowed.clone();
+        let root = Cell::new(true);
+        let res = Gc {
+            gc_node_ptr,
+            borrowed,
+            root,
+        };
+        res.root();
+        res
+    }
 }
 
 pub struct GcRefMut<T: Trace + ?Sized + 'static> {
