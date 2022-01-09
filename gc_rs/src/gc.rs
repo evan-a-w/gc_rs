@@ -15,13 +15,10 @@ pub struct Gc<T: Trace + ?Sized + 'static> {
 
 impl<T: Trace + ?Sized + 'static> Clone for Gc<T> {
     fn clone(&self) -> Self {
-        let gc_node_ptr = self.gc_node_ptr.clone();
-        let borrowed = self.borrowed.clone();
-        let root = Cell::new(true);
         let res = Gc {
-            gc_node_ptr,
-            borrowed,
-            root,
+            gc_node_ptr: self.gc_node_ptr.clone(),
+            borrowed: self.borrowed.clone(),
+            root: Cell::new(false),
         };
         res.root();
         res
