@@ -231,7 +231,12 @@ pub fn hashmap() {
 
         for i in 0..1000 {
             assert!(*map.get(&format!("{}", i)).unwrap() == i);
+            assert!(*map.get(&format!("{}", i)).unwrap() == i);
+            assert!(*map.get(&format!("{}", i)).unwrap() == i);
         }
+
+        assert!(*map.get("50").unwrap() == 50);
+        assert!(*map.get("999").unwrap() == 999);
     }
 
     GC_STATE.with(|st| st.borrow_mut().collect_garbage());
