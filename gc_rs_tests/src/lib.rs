@@ -64,6 +64,16 @@ mod tests {
             assert!(roots == 0);
         });
     }
+
+    #[test]
+    fn test_hashmap() {
+        hashmap();
+    }
+
+    #[test]
+    fn test_linked_list() {
+        linked_list();
+    }
 }
 
 pub fn manual_trait() {
@@ -241,4 +251,76 @@ pub fn vec() {
     }
 
     GC_STATE.with(|st| st.borrow_mut().collect_garbage());
+}
+
+pub fn hashmap() {
+    use std::collections::HashMap;
+    use std::thread::sleep;
+    use std::time::Duration;
+    {
+        let map = Gc::new(HashMap::new());
+
+        for i in 0..500usize {
+            let _ref = &*map;
+            let mut_ref = &mut *map.borrow_mut().unwrap();
+            mut_ref.insert(format!("{}", i), i);
+            // Aliased - does this crash?
+            assert!(_ref.get(&format!("{}", i)).unwrap() == &i);
+        }
+
+        sleep(Duration::from_millis(5000));
+
+        for i in 500..1000 {
+            map.borrow_mut().unwrap().insert(format!("{}", i), i);
+        }
+
+        GC_STATE.with(|st| st.borrow_mut().collect_garbage());
+
+        for i in 0..1000 {
+            assert!(*map.get(&format!("{}", i)).unwrap() == i);
+            assert!(*map.get(&format!("{}", i)).unwrap() == i);
+            assert!(*map.get(&format!("{}", i)).unwrap() == i);
+        }
+
+        assert!(*map.get("50").unwrap() == 50);
+        assert!(*map.get("999").unwrap() == 999);
+    }
+
+    GC_STATE.with(|st| st.borrow_mut().collect_garbage());
+}
+
+pub fn linked_list() {
+    #[derive(Trace, Clone, PartialEq)]
+    struct LinkedList {
+        pub val: i32,
+        pub next: Option<Gc<LinkedList>>,
+    }
+
+    fn new(val: i32, next: Option<Gc<LinkedList>>) -> Gc<LinkedList> {
+        Gc::new(LinkedList { val, next })
+    }
+
+    fn from_vec(vec: Vec<i32>) -> Option<Gc<LinkedList>> {
+        let mut head = None;
+        for i in vec.into_iter().rev() {
+            head = Some(new(i, head));
+        }
+        head
+    }
+
+    fn reverse(list: Option<Gc<LinkedList>>) -> Option<Gc<LinkedList>> {
+        let mut head = None;
+        let mut curr = list;
+        while let Some(l) = curr {
+            head = Some(new(l.val, head));
+            curr = l.next.clone();
+        }
+        head
+    }
+
+    assert!(from_vec(vec![1, 2, 3]) == reverse(from_vec(vec![3, 2, 1])));
+
+    assert!(from_vec(vec![]) == None);
+
+    assert!(reverse(from_vec(vec![])) == None);
 }

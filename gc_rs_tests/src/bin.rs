@@ -5,4 +5,8 @@ fn main() {
     manual_trait();
 
     auto_trait();
+
+    hashmap();
+
+    linked_list();
 }

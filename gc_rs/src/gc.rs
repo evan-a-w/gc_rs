@@ -7,11 +7,22 @@ use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
 
-#[derive(Clone)]
 pub struct Gc<T: Trace + ?Sized + 'static> {
     gc_node_ptr: NonNull<GcNode<T>>,
     borrowed: Rc<Cell<bool>>,
     root: Cell<bool>,
+}
+
+impl<T: Trace + ?Sized + 'static> Clone for Gc<T> {
+    fn clone(&self) -> Self {
+        let res = Gc {
+            gc_node_ptr: self.gc_node_ptr.clone(),
+            borrowed: self.borrowed.clone(),
+            root: Cell::new(false),
+        };
+        res.root();
+        res
+    }
 }
 
 pub struct GcRefMut<T: Trace + ?Sized + 'static> {
@@ -79,7 +90,8 @@ impl<T: Trace + ?Sized + 'static> Deref for GcRefMut<T> {
 
 impl<T: Trace + ?Sized + 'static> DerefMut for GcRefMut<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        // SAFETY: The value cannot be mutably borrowed or immutably borrowed (GcRefMut guarantees such)
+        // SAFETY: The value cannot be mutably borrowed. It can be immutably borrowed
+        // actually but just dont :))
         unsafe { &mut self.gc_node_ptr.as_mut().val }
     }
 }
@@ -132,22 +144,26 @@ impl<T: Trace + ?Sized + 'static> Trace for Gc<T> {
     }
 
     fn root(&self) {
-        self.root.set(true);
-        unsafe {
-            let r = self.gc_node_ptr.as_ref();
-            let mut data = r.data.get();
-            data.add_roots();
-            r.data.set(data);
+        if !self.root.get() {
+            self.root.set(true);
+            unsafe {
+                let r = self.gc_node_ptr.as_ref();
+                let mut data = r.data.get();
+                data.add_roots();
+                r.data.set(data);
+            }
         }
     }
 
     fn deroot(&self) {
-        self.root.set(false);
-        unsafe {
-            let r = self.gc_node_ptr.as_ref();
-            let mut data = r.data.get();
-            data.sub_roots();
-            r.data.set(data);
+        if self.root.get() {
+            self.root.set(false);
+            unsafe {
+                let r = self.gc_node_ptr.as_ref();
+                let mut data = r.data.get();
+                data.sub_roots();
+                r.data.set(data);
+            }
         }
     }
 }
