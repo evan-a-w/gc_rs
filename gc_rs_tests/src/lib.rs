@@ -1,8 +1,14 @@
+#![feature(test)]
+
+extern crate test;
+
 use gc_rs::{Trace, Gc, GC_STATE};
 
 #[cfg(test)]
 mod tests {
     use crate::*;
+    use test::Bencher;
+
     #[test]
     fn test_manual_trait() {
         manual_trait();
@@ -16,6 +22,47 @@ mod tests {
     #[test]
     fn test_vec() {
         vec();
+    }
+
+    #[bench]
+    fn bench_collection(b: &mut Bencher) {
+        #[derive(Trace)]
+        struct Foo {
+            pub x: i32,
+            pub y: String,
+        }
+
+        #[derive(Trace)]
+        struct Bar {
+            pub x: i32,
+            pub y: Gc<Foo>,
+        }
+        
+        b.iter(|| {
+            {
+                let mut v = Vec::new();
+                for _ in 0..100000 {
+                    let foo = Foo {
+                        x: 1,
+                        y: "hello".to_string(),
+                    };
+                    let bar = Bar {
+                        x: 2,
+                        y: Gc::new(foo),
+                    };
+                    v.push(Gc::new(bar));
+                }
+            }
+            GC_STATE.with(|st| st.borrow_mut().collect_garbage());
+            let mut len: usize = 0;
+            let mut roots: usize = 0;
+            GC_STATE.with(|st| {
+                len = unsafe { st.borrow().get_ptrs_len() };
+                roots = unsafe { st.borrow().get_roots_len() };
+            });
+            assert!(len == 0);
+            assert!(roots == 0);
+        });
     }
 }
 
